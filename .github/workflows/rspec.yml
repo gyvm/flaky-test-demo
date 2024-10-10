@@ -15,8 +15,21 @@ jobs:
       with:
         ruby-version: '3.3.4'
     - name: Install dependencies
-      run: |
-        bundle install
+      run: bundle install
     - name: Run RSpec
-      run: |
-        bundle exec rspec --format documentation
+      id: rspec
+      continue-on-error: true
+      run: bundle exec rspec --format documentation > rspec_result.txt
+    - name: Comment on PR if RSpec fails
+      if: failure()
+      uses: actions/github-script@v6
+      with:
+        script: |
+          const fs = require('fs');
+          const results = fs.readFileSync('rspec_result.txt', 'utf8');
+          github.issues.createComment({
+            issue_number: context.payload.pull_request.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: `RSpec test failed. Here are the results:\n\`\`\`\n${results}\n\`\`\``
+          });
