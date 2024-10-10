@@ -19,17 +19,10 @@ jobs:
     - name: Run RSpec
       id: rspec
       continue-on-error: true
-      run: bundle exec rspec --format documentation > rspec_result.txt
-    - name: Comment on PR if RSpec fails
-      if: failure()
-      uses: actions/github-script@v6
+      run: bundle exec rspec -f j -o tmp/rspec_results.json -f p
+    - name: RSpec Report
+      uses: SonicGarden/rspec-report-action@v1
       with:
-        script: |
-          const fs = require('fs');
-          const results = fs.readFileSync('rspec_result.txt', 'utf8');
-          github.issues.createComment({
-            issue_number: context.payload.pull_request.number,
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            body: `RSpec test failed. Here are the results:\n\`\`\`\n${results}\n\`\`\``
-          });
+        token: ${{ secrets.GITHUB_TOKEN }}
+        json-path: tmp/rspec_results.json
+      if: always()
