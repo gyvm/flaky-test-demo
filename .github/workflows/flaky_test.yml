@@ -22,6 +22,7 @@ jobs:
         run: bundle install
       - name: Run RSpec
         id: rspec
+        continue-on-error: true
         run: |
           bundle exec rspec -f j -o tmp/rspec_results.json -f p
 
