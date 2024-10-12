@@ -30,3 +30,7 @@ jobs:
         token: ${{ secrets.GITHUB_TOKEN }}
         json-path: tmp/rspec_results.json
       if: always()
+
+    - name: Fail the build if tests failed
+      if: failure()
+      run: exit 1
