@@ -20,6 +20,11 @@ jobs:
         ruby-version: '3.3.4'
     - name: Install dependencies
       run: bundle install
+    - name: Check if this push is related to a PR
+      id: check_pr
+      run: |
+        PR_EXISTS=$(gh pr list --head ${{ github.ref_name }} --json id | jq '. | length')
+        echo "::set-output name=pr_exists::$PR_EXISTS"
     - name: Run RSpec
       id: rspec
       continue-on-error: true
@@ -29,12 +34,13 @@ jobs:
           echo "RSpec failed"
           exit 1
         fi
+      if: ${{ github.event_name == 'push' && steps.check_pr.outputs.pr_exists == '0' || github.event_name == 'pull_request' }}
     - name: RSpec Report
       uses: SonicGarden/rspec-report-action@v1
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
         json-path: tmp/rspec_results.json
-      if: always()
+      if: github.event_name == 'pull_request'
 
     - name: Fail the build if tests failed
       if: failure()
