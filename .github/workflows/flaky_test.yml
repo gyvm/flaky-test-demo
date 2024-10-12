@@ -2,7 +2,11 @@ name: Run Tests and Detect Flaky Tests
 
 on:
   push:
+    branches:
+      - '**'
   pull_request:
+    branches:
+      - '**'
 
 permissions:
   issues: write
@@ -22,24 +26,27 @@ jobs:
         run: bundle install
       - name: Run RSpec
         id: rspec
-        continue-on-error: true
         run: |
           bundle exec rspec -f j -o tmp/rspec_results.json -f p
+        continue-on-error: true
 
+      # アーティファクトとしてテスト結果を保存（次回の比較のため）
       - name: Upload test results as artifact
         uses: actions/upload-artifact@v3
         with:
           name: test-results
           path: tmp/rspec_results.json
 
+      # Flaky Testを検出（リトライして失敗したテストがFlakyと見なされる）
       - name: Detect Flaky Tests
         id: detect_flaky
         run: |
-          curl -O https://github.com/${{ github.repository }}/actions/artifacts/${{ steps.upload-artifact.outputs.artifact-id }}/download
-          
-          flaky_tests=$(python3 ./scripts/detect_flaky_tests.py tmp/rspec_results.json)
+          # 失敗したテストがリトライしても成功しなかった場合にFlakyとして検出
+          failed_tests=$(jq '[.examples[] | select(.status == "failed")]' tmp/rspec_results.json)
+          flaky_tests=$(echo "$failed_tests" | jq 'map(select(.attempts == 3))')  # 3回リトライしても失敗したテストをFlakyと判定
           echo "::set-output name=flaky_tests::${flaky_tests}"
 
+      # Flaky Testが見つかればPRにコメント
       - name: Post Flaky Test Results as Comment
         uses: peter-evans/create-or-update-comment@v3
         with:
