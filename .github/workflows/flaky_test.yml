@@ -1,0 +1,58 @@
+name: Run Tests and Detect Flaky Tests
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  issues: write
+  pull-requests: write
+
+jobs:
+  flaky-detection:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.x'
+
+      - name: Install dependencies
+        run: |
+          gem install bundler
+          bundle install
+
+      - name: Run tests with rspec-retry
+        id: rspec
+        run: |
+          bundle exec rspec --retry 2 --format json --out tmp/rspec_results.json
+
+      - name: Upload test results as artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: test-results
+          path: tmp/rspec_results.json
+
+      - name: Detect Flaky Tests
+        id: detect_flaky
+        run: |
+          curl -O https://github.com/${{ github.repository }}/actions/artifacts/${{ steps.upload-artifact.outputs.artifact-id }}/download
+          
+          flaky_tests=$(python3 ./scripts/detect_flaky_tests.py tmp/rspec_results.json)
+          echo "::set-output name=flaky_tests::${flaky_tests}"
+
+      - name: Post Flaky Test Results as Comment
+        uses: peter-evans/create-or-update-comment@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          issue-number: ${{ github.event.pull_request.number }}
+          body: |
+            ## Flaky Test Detection Report
+
+            The following tests were detected as flaky:
+            ${{ steps.detect_flaky.outputs.flaky_tests }}
+        if: steps.detect_flaky.outputs.flaky_tests != '[]'
