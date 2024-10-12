@@ -23,7 +23,12 @@ jobs:
     - name: Run RSpec
       id: rspec
       continue-on-error: true
-      run: bundle exec rspec -f j -o tmp/rspec_results.json -f p
+      run: |
+        bundle exec rspec -f j -o tmp/rspec_results.json -f p
+        if [ $? -ne 0 ]; then
+          echo "RSpec failed"
+          exit 1
+        fi
     - name: RSpec Report
       uses: SonicGarden/rspec-report-action@v1
       with:
