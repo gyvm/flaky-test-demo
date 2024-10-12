@@ -41,9 +41,9 @@ jobs:
       - name: Detect Flaky Tests
         id: detect_flaky
         run: |
-          # 失敗したテストがリトライしても成功しなかった場合にFlakyとして検出
+          cat tmp/rspec_results.json
           failed_tests=$(jq '[.examples[] | select(.status == "failed")]' tmp/rspec_results.json)
-          flaky_tests=$(echo "$failed_tests" | jq 'map(select(.attempts == 3))')  # 3回リトライしても失敗したテストをFlakyと判定
+          flaky_tests=$(echo "$failed_tests" | jq 'map(select(.status == "failed" and .run_time != null))')
           echo "::set-output name=flaky_tests::${flaky_tests}"
 
       # Flaky Testが見つかればPRにコメント
