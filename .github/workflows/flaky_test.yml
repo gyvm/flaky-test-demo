@@ -13,23 +13,17 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-
+      - uses: actions/checkout@v3
       - name: Set up Ruby
         uses: ruby/setup-ruby@v1
         with:
-          ruby-version: '3.x'
-
+          ruby-version: '3.3.4'
       - name: Install dependencies
-        run: |
-          gem install bundler
-          bundle install
-
-      - name: Run tests with rspec-retry
+        run: bundle install
+      - name: Run RSpec
         id: rspec
         run: |
-          bundle exec rspec --retry 2 --format json --out tmp/rspec_results.json
+          bundle exec rspec -f j -o tmp/rspec_results.json -f p
 
       - name: Upload test results as artifact
         uses: actions/upload-artifact@v3
