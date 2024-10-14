@@ -60,5 +60,7 @@ jobs:
         if: steps.detect_flaky.outputs.flaky_tests != '[]'
 
       - name: Run CTRF annotations
-        run: npx github-actions-ctrf tmp/rspec_results.json
+        run: |
+          npx junit-to-ctrf path/to/junit.xml
+          npx github-actions-ctrf tmp/rspec_results.json
         if: always()
