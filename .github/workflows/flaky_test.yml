@@ -24,10 +24,10 @@ jobs:
           ruby-version: '3.3.4'
       - name: Install dependencies
         run: bundle install
-      - name: Run RSpec
+      - name: Run RSpec with JUnit Formatter
         id: rspec
         run: |
-          bundle exec rspec -f j -o tmp/rspec_results.json -f p
+          bundle exec rspec -f RspecJunitFormatter -o tmp/rspec_results.xml
         continue-on-error: true
 
       # アーティファクトとしてテスト結果を保存（次回の比較のため）
@@ -35,14 +35,14 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: test-results
-          path: tmp/rspec_results.json
+          path: tmp/rspec_results.xml
 
       # Flaky Testを検出（リトライして失敗したテストがFlakyと見なされる）
       - name: Detect Flaky Tests
         id: detect_flaky
         run: |
-          cat tmp/rspec_results.json
-          failed_tests=$(jq '[.examples[] | select(.status == "failed")]' tmp/rspec_results.json)
+          cat tmp/rspec_results.xml
+          failed_tests=$(jq '[.examples[] | select(.status == "failed")]' tmp/rspec_results.xml)
           flaky_tests=$(echo "$failed_tests" | jq 'map(select(.status == "failed" and .run_time != null))')
           echo "::set-output name=flaky_tests::${flaky_tests}"
 
@@ -61,6 +61,6 @@ jobs:
 
       - name: Run CTRF annotations
         run: |
-          npx junit-to-ctrf tmp/rspec_results.json
+          npx junit-to-ctrf tmp/rspec_results.xml -o tmp/rspec_results.json
           npx github-actions-ctrf tmp/rspec_results.json
         if: always()
