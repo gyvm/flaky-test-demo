@@ -61,6 +61,6 @@ jobs:
 
       - name: Run CTRF annotations
         run: |
-          npx junit-to-ctrf path/to/junit.xml
+          npx junit-to-ctrf tmp/rspec_results.json
           npx github-actions-ctrf tmp/rspec_results.json
         if: always()
