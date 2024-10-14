@@ -1,0 +1,68 @@
+name: Run Tests and Detect Flaky Tests
+
+on:
+  push:
+    branches:
+      - '**'
+  pull_request:
+    branches:
+      - '**'
+
+permissions:
+  issues: write
+  pull-requests: write
+
+jobs:
+  flaky-detection:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.3.4'
+      - name: Install dependencies
+        run: bundle install
+      - name: Run RSpec with JUnit Formatter
+        id: rspec
+        run: |
+          bundle exec rspec -f RspecJunitFormatter -o tmp/rspec_results.xml
+        continue-on-error: true
+
+      # アーティファクトとしてテスト結果を保存（次回の比較のため）
+      - name: Upload test results as artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: test-results
+          path: tmp/rspec_results.xml
+
+      # Flaky Testを検出（リトライして失敗したテストがFlakyと見なされる）
+      - name: Detect Flaky Tests
+        id: detect_flaky
+        run: |
+          cat tmp/rspec_results.xml
+          failed_tests=$(jq '[.examples[] | select(.status == "failed")]' tmp/rspec_results.xml)
+          flaky_tests=$(echo "$failed_tests" | jq 'map(select(.status == "failed" and .run_time != null))')
+          echo "::set-output name=flaky_tests::${flaky_tests}"
+
+      # Flaky Testが見つかればPRにコメント
+#      - name: Post Flaky Test Results as Comment
+#        uses: peter-evans/create-or-update-comment@v3
+#        with:
+#          token: ${{ secrets.GITHUB_TOKEN }}
+#          issue-number: ${{ github.event.pull_request.number }}
+#          body: |
+#            ## Flaky Test Detection Report
+#
+#            The following tests were detected as flaky:
+#            ${{ steps.detect_flaky.outputs.flaky_tests }}
+#        if: steps.detect_flaky.outputs.flaky_tests != '[]'
+
+      - name: Run CTRF annotations
+        run: |
+          cat tmp/rspec_results.xml
+          npx junit-to-ctrf tmp/rspec_results.xml -o tmp/rspec_results.json
+          cat tmp/rspec_results.json
+          npx github-actions-ctrf tmp/rspec_results.json
+        if: always()
