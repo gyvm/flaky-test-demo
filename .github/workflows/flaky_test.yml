@@ -47,20 +47,22 @@ jobs:
           echo "::set-output name=flaky_tests::${flaky_tests}"
 
       # Flaky Testが見つかればPRにコメント
-      - name: Post Flaky Test Results as Comment
-        uses: peter-evans/create-or-update-comment@v3
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          issue-number: ${{ github.event.pull_request.number }}
-          body: |
-            ## Flaky Test Detection Report
-
-            The following tests were detected as flaky:
-            ${{ steps.detect_flaky.outputs.flaky_tests }}
-        if: steps.detect_flaky.outputs.flaky_tests != '[]'
+#      - name: Post Flaky Test Results as Comment
+#        uses: peter-evans/create-or-update-comment@v3
+#        with:
+#          token: ${{ secrets.GITHUB_TOKEN }}
+#          issue-number: ${{ github.event.pull_request.number }}
+#          body: |
+#            ## Flaky Test Detection Report
+#
+#            The following tests were detected as flaky:
+#            ${{ steps.detect_flaky.outputs.flaky_tests }}
+#        if: steps.detect_flaky.outputs.flaky_tests != '[]'
 
       - name: Run CTRF annotations
         run: |
+          cat tmp/rspec_results.xml
           npx junit-to-ctrf tmp/rspec_results.xml -o tmp/rspec_results.json
+          cat tmp/rspec_results.json
           npx github-actions-ctrf tmp/rspec_results.json
         if: always()
